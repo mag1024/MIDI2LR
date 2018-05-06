@@ -220,7 +220,7 @@ void MainContentComponent::MidiCmdCallback(rsj::MidiMessage mm)
             commandtype = "PITCHBEND";
             break;
         default: //shouldn't receive any messages note categorized above
-            Expects(0);
+            Ensures(0);
     }
     mm.channel++; //used to 1-based channel numbers
     last_command_ = juce::String(mm.channel) + ": " + commandtype +
@@ -351,14 +351,14 @@ void MainContentComponent::buttonClicked(juce::Button* button)
 #pragma warning(suppress: 26461) //must not change function signature, used as callback
 void MainContentComponent::ProfileChanged(juce::XmlElement* xml_element, const juce::String& file_name)
 { //-V2009 overridden method
-    const MessageManagerLock mmLock;
     command_table_model_.BuildFromXml(xml_element);
     command_table_.updateContent();
-    command_table_.repaint();
+    {
+        const MessageManagerLock mmLock;
+        command_table_.repaint();
+    }
     profile_name_label_.setText(file_name, NotificationType::dontSendNotification);
-    //  _systemTrayComponent.showInfoBubble(filename, "Profile loaded");
-
-        // Send new CC parameters to MIDI Out devices
+// Send new CC parameters to MIDI Out devices
     if (const auto ptr = lr_ipc_out_.lock())
         ptr->SendCommand("FullRefresh 1\n"s);
 }

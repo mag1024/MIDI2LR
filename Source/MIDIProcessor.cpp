@@ -29,13 +29,21 @@ namespace {
 
 MidiProcessor::~MidiProcessor()
 {
+    for (const auto& dev : devices_)
+        dev->stop();
+    moodycamel::ConsumerToken ctok(messages_);
+    rsj::MidiMessage message_copy{};
+    while (messages_.try_dequeue(ctok, message_copy))
+    {
+        /* pump the queue empty */
+    }
     messages_.enqueue(kTerminate);
 }
 
 void MidiProcessor::Init()
 {
     InitDevices();
-    dispatch_future_ = std::async(std::launch::async,&MidiProcessor::DispatchMessages,this);
+    dispatch_messages_future_ = std::async(std::launch::async,&MidiProcessor::DispatchMessages,this);
 }
 
 void MidiProcessor::handleIncomingMidiMessage(juce::MidiInput * /*device*/,
@@ -43,8 +51,7 @@ void MidiProcessor::handleIncomingMidiMessage(juce::MidiInput * /*device*/,
 {
     //this procedure is in near-real-time, so must return quickly.
     //will place message in multithreaded queue and let separate process handle the messages
-    const thread_local moodycamel::ProducerToken ptok(messages_);
-
+    static const thread_local moodycamel::ProducerToken ptok(messages_);
     const rsj::MidiMessage mess{message};
     switch (mess.message_type_byte) {
         case rsj::kCcFlag:
@@ -87,7 +94,7 @@ void MidiProcessor::InitDevices()
 
 void MidiProcessor::DispatchMessages()
 {
-    thread_local moodycamel::ConsumerToken ctok(messages_);
+    static thread_local moodycamel::ConsumerToken ctok(messages_);
     do {
         rsj::MidiMessage message_copy;
         if (!messages_.try_dequeue(ctok, message_copy))
