@@ -1,5 +1,3 @@
-// This is an open source non-commercial project. Dear PVS-Studio, please check it.
-// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 /*
 ==============================================================================
 
@@ -25,12 +23,14 @@ MIDI2LR.  If not, see <http://www.gnu.org/licenses/>.
 
 std::string rsj::GetKeyboardLayout()
 {
-    // get current keyboard layout by name
-    TISInputSourceRef current_source = TISCopyCurrentKeyboardInputSource();
-    NSString *s = (__bridge NSString *)(TISGetInputSourceProperty(current_source, kTISPropertyInputSourceID));
-    NSString *t = (__bridge NSString *)(TISGetInputSourceProperty(current_source, kTISPropertyLocalizedName));
-    if (s and t) {
-        return std::string([s UTF8String]) + ' '+ std::string([t UTF8String]);
-    }
-    return std::string("could not get input source ID");
+   // get current keyboard layout by name
+   TISInputSourceRef current_source = TISCopyCurrentKeyboardInputSource();
+   NSString* s =
+       (__bridge NSString*)(TISGetInputSourceProperty(current_source, kTISPropertyInputSourceID));
+   NSString* t =
+       (__bridge NSString*)(TISGetInputSourceProperty(current_source, kTISPropertyLocalizedName));
+   if (s and t) {
+      return std::string([s UTF8String]) + ' ' + std::string([t UTF8String]);
+   }
+   return std::string("could not get input source ID");
 }

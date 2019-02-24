@@ -22,42 +22,47 @@ MIDI2LR.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MIDI2LR_COMMANDTABLEMODEL_H
 #define MIDI2LR_COMMANDTABLEMODEL_H
 
-#include <utility>
+#include <mutex>
+#include <shared_mutex>
 #include <vector>
 #include "../JuceLibraryCode/JuceHeader.h"
+#include "CommandSet.h"
 #include "MidiUtilities.h"
 class CommandMap;
 
-class CommandTableModel final: public juce::TableListBoxModel {
-public:
-    void Init(CommandMap* map_command) noexcept;
+class CommandTableModel final : public juce::TableListBoxModel {
+ public:
+   explicit CommandTableModel(CommandMap& map_command) noexcept;
 
-    // adds a row with a corresponding MIDI message to the table
-    void AddRow(int midi_channel, int midi_data, rsj::MsgIdEnum msg_type);
-    // removes a row from the table
-    void RemoveRow(size_t row);
-    // removes all rows from the table
-    void RemoveAllRows() noexcept;
-    // builds the table from an XML file
-    void BuildFromXml(const juce::XmlElement * root);
-    // returns the index of the row associated to a particular MIDI message
-    [[nodiscard]] int GetRowForMessage(int midi_channel, int midi_data, rsj::MsgIdEnum msg_type) const;
+   // adds a row with a corresponding MIDI message to the table
+   void AddRow(int midi_channel, int midi_data, rsj::MsgIdEnum msg_type);
+   // removes a row from the table
+   void RemoveRow(size_t row);
+   // removes all rows from the table
+   void RemoveAllRows();
+   // builds the table from an XML file
+   void BuildFromXml(const juce::XmlElement* root);
+   // returns the index of the row associated to a particular MIDI message
+   [[nodiscard]] int GetRowForMessage(
+       int midi_channel, int midi_data, rsj::MsgIdEnum msg_type) const;
 
-private:
-    // TableListBoxModel overrides
-    void sortOrderChanged(int new_sort_column_id, bool is_forwards) override;
-    [[nodiscard]] int getNumRows() noexcept override;
-    void paintRowBackground(juce::Graphics&, int row_number, int width,
-        int height, bool row_is_selected) override;
-    void paintCell(juce::Graphics&, int row_number, int column_id, int width,
-        int height, bool row_is_selected) override;
-    juce::Component *refreshComponentForCell(int row_number, int column_id,
-        bool is_row_selected, juce::Component *existing_component_to_update) override;
-    void Sort();
-    CommandMap* command_map_{nullptr};
-    std::pair<int, bool> current_sort_{2, true};
-    std::pair<int, bool> prior_sort_{2, true};
-    std::vector<rsj::MidiMessageId> commands_;
+ private:
+   // TableListBoxModel overrides
+   void sortOrderChanged(int new_sort_column_id, bool is_forwards) override;
+   [[nodiscard]] int getNumRows() override;
+   void paintRowBackground(
+       juce::Graphics&, int row_number, int width, int height, bool row_is_selected) override;
+   void paintCell(juce::Graphics&, int row_number, int column_id, int width, int height,
+       bool row_is_selected) override;
+   juce::Component* refreshComponentForCell(int row_number, int column_id, bool is_row_selected,
+       juce::Component* existing_component_to_update) override;
+   void Sort();
+   CommandMap& command_map_;
+   CommandSet command_set_{};
+   mutable std::shared_mutex cmd_table_mod_mtx_;
+   std::pair<int, bool> current_sort_{2, true};
+   std::pair<int, bool> prior_sort_{2, true};
+   std::vector<rsj::MidiMessageId> commands_;
 };
 
 #endif

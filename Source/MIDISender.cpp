@@ -1,5 +1,3 @@
-// This is an open source non-commercial project. Dear PVS-Studio, please check it.
-// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 /*
   ==============================================================================
 
@@ -21,57 +19,69 @@ MIDI2LR.  If not, see <http://www.gnu.org/licenses/>.
   ==============================================================================
 */
 #include "MIDISender.h"
+#include <exception>
 #include <gsl/gsl>
+#include "../JuceLibraryCode/JuceHeader.h"
+#include "Misc.h"
 
 void MidiSender::Init()
 {
-    InitDevices();
+   InitDevices();
 }
 
 void MidiSender::SendCc(int midi_channel, int controller, int value) const
 {
-    if (controller < 128) { // regular message
-        for (const auto& dev : output_devices_)
-            dev->sendMessageNow(juce::MidiMessage::controllerEvent(midi_channel, controller, value));
-    }
-    else { // NRPN
-        const auto parameter_lsb = controller & 0x7f;
-        const auto parameter_msb = (controller >> 7) & 0x7F;
-        const auto value_lsb = value & 0x7f;
-        const auto value_msb = (value >> 7) & 0x7F;
-        for (const auto& dev : output_devices_) {
-            dev->sendMessageNow(juce::MidiMessage::controllerEvent(midi_channel, 99, parameter_msb));
-            dev->sendMessageNow(juce::MidiMessage::controllerEvent(midi_channel, 98, parameter_lsb));
-            dev->sendMessageNow(juce::MidiMessage::controllerEvent(midi_channel, 6, value_msb));
-            dev->sendMessageNow(juce::MidiMessage::controllerEvent(midi_channel, 38, value_lsb));
-        }
-    }
+   if (controller < 128) { // regular message
+      for (const auto& dev : output_devices_)
+         dev->sendMessageNow(juce::MidiMessage::controllerEvent(midi_channel, controller, value));
+   }
+   else { // NRPN
+      const auto parameter_lsb = controller & 0x7f;
+      const auto parameter_msb = (controller >> 7) & 0x7F;
+      const auto value_lsb = value & 0x7f;
+      const auto value_msb = (value >> 7) & 0x7F;
+      for (const auto& dev : output_devices_) {
+         dev->sendMessageNow(juce::MidiMessage::controllerEvent(midi_channel, 99, parameter_msb));
+         dev->sendMessageNow(juce::MidiMessage::controllerEvent(midi_channel, 98, parameter_lsb));
+         dev->sendMessageNow(juce::MidiMessage::controllerEvent(midi_channel, 6, value_msb));
+         dev->sendMessageNow(juce::MidiMessage::controllerEvent(midi_channel, 38, value_lsb));
+      }
+   }
 }
 
 void MidiSender::SendNoteOn(int midi_channel, int controller, int value) const
 {
-    for (const auto& dev : output_devices_)
-        dev->sendMessageNow(MidiMessage::noteOn(midi_channel, controller,
-            gsl::narrow_cast<juce::uint8>(value)));
+   for (const auto& dev : output_devices_)
+      dev->sendMessageNow(juce::MidiMessage::noteOn(
+          midi_channel, controller, gsl::narrow_cast<juce::uint8>(value)));
 }
 
 void MidiSender::SendPitchWheel(int midi_channel, int value) const
 {
-    for (const auto& dev : output_devices_)
-        dev->sendMessageNow(MidiMessage::pitchWheel(midi_channel, value));
+   for (const auto& dev : output_devices_)
+      dev->sendMessageNow(juce::MidiMessage::pitchWheel(midi_channel, value));
 }
 
 void MidiSender::RescanDevices()
 {
-    output_devices_.clear();
-    InitDevices();
+   output_devices_.clear();
+   rsj::Log("Cleared output devices");
+   InitDevices();
 }
 
 void MidiSender::InitDevices()
 {
-    for (auto idx = 0; idx < juce::MidiOutput::getDevices().size(); ++idx) {
-        auto dev = juce::MidiOutput::openDevice(idx);
-        if (dev)
+   try {
+      for (auto idx = 0; idx < juce::MidiOutput::getDevices().size(); ++idx) {
+         auto dev = juce::MidiOutput::openDevice(idx);
+         if (dev) {
             output_devices_.emplace_back(dev);
-    }
+            rsj::Log("Opened output device " + dev->getName());
+         }
+      }
+   }
+   catch (const std::exception& e) {
+      rsj::ExceptionResponse(typeid(this).name(), __func__, e);
+      throw;
+   }
 }

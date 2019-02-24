@@ -22,7 +22,7 @@ MIDI2LR.  If not, see <http://www.gnu.org/licenses/>.
 local LrMobdebug = import 'LrMobdebug'
 LrMobdebug.start()
 --]]-----------end debug section
-
+local Database = require 'Database'
 local LrTasks = import 'LrTasks'
 -- Main task
 LrTasks.startAsyncTask(
@@ -43,8 +43,6 @@ LrTasks.startAsyncTask(
       local LrFileUtils    = import 'LrFileUtils'
       local LrLocalization = import 'LrLocalization'
       local Info           = require 'Info'
-      local appdatafile     = LrPathUtils.child(_PLUGIN.path, 'MenuList.lua')
-      local plugindatafile  = LrPathUtils.child(_PLUGIN.path, 'ParamList.lua')
       local versionmismatch = false
 
       if ProgramPreferences.DataStructure == nil then
@@ -57,11 +55,10 @@ LrTasks.startAsyncTask(
 
       if
       versionmismatch or
-      LrFileUtils.exists(appdatafile) ~= 'file' or
-      LrFileUtils.exists(plugindatafile) ~= 'file' or
+      LrFileUtils.exists(Database.AppTrans) ~= 'file' or
       ProgramPreferences.DataStructure.language ~= LrLocalization.currentLanguage()
       then
-        require 'Database'
+        Database.WriteAppTrans(ProgramPreferences.DataStructure.language)
         ProgramPreferences.DataStructure = {version={},language = LrLocalization.currentLanguage()}
         for k,v in pairs(Info.VERSION) do
           ProgramPreferences.DataStructure.version[k] = v
@@ -79,13 +76,13 @@ LrTasks.startAsyncTask(
     local Keywords        = require 'Keywords'
     local Limits          = require 'Limits'
     local LocalPresets    = require 'LocalPresets'
-    local ParamList       = require 'ParamList'
     local Profiles        = require 'Profiles'
     local Ut              = require 'Utilities'
     local Virtual         = require 'Virtual'
     local LrApplication       = import 'LrApplication'
     local LrApplicationView   = import 'LrApplicationView'
     local LrDevelopController = import 'LrDevelopController'
+    local LrDialogs           = import 'LrDialogs'
     local LrSelection         = import 'LrSelection'
     local LrUndo              = import 'LrUndo'
     --global variables
@@ -107,7 +104,7 @@ LrTasks.startAsyncTask(
       AppInfoClear                           = function() Info.AppInfo = {}; end,
       AppInfoDone                            = DebugInfo.write,
       AutoLateralCA                          = CU.fToggle01('AutoLateralCA'),
-      AutoTone                               = function() CU.fChangePanel('tonePanel'); CU.ApplySettings({AutoTone = true}); CU.FullRefresh(); end,
+      AutoTone                               = Ut.wrapFOM(LrDevelopController.setAutoTone),
       BrushFeatherLarger                     = CU.fSimulateKeys(KS.KeyCode.BrushIncreaseKeyShifted,true,{dust=true, localized=true, gradient=true, circularGradient=true}),
       BrushFeatherSmaller                    = CU.fSimulateKeys(KS.KeyCode.BrushDecreaseKeyShifted,true,{dust=true, localized=true, gradient=true, circularGradient=true}),
       BrushSizeLarger                        = CU.fSimulateKeys(KS.KeyCode.BrushIncreaseKey,true,{dust=true, localized=true, gradient=true, circularGradient=true}),
@@ -119,6 +116,7 @@ LrTasks.startAsyncTask(
       CycleMaskOverlayColor                  = CU.fSimulateKeys(KS.KeyCode.CycleAdjustmentBrushOverlay,true),
       DecreaseRating                         = LrSelection.decreaseRating,
       DecrementLastDevelopParameter          = function() Ut.execFOM(LrDevelopController.decrement,LastParam) end,
+      EditPhotoshop                          = Ut.wrapFOM(LrDevelopController.editInPhotoshop),
       EnableCalibration                      = CU.fToggleTFasync('EnableCalibration'),
       EnableCircularGradientBasedCorrections = CU.fToggleTFasync('EnableCircularGradientBasedCorrections'),
       EnableColorAdjustments                 = CU.fToggleTFasync('EnableColorAdjustments'),
@@ -226,6 +224,8 @@ LrTasks.startAsyncTask(
       LensProfileEnable               = CU.fToggle01Async('LensProfileEnable'),
       Loupe                           = CU.fToggleTool('loupe'),
       Next                            = LrSelection.nextPhoto,
+      openExportDialog                = Ut.wrapForEachPhoto('openExportDialog'), 
+      openExportWithPreviousDialog    = Ut.wrapForEachPhoto('openExportWithPreviousDialog'),
       PasteSelectedSettings           = CU.PasteSelectedSettings,
       PasteSettings                   = CU.PasteSettings,
       Pause                           = function() LrTasks.sleep( 0.02 ) end,
@@ -321,7 +321,9 @@ LrTasks.startAsyncTask(
       Preset_80                       = CU.fApplyPreset(80),
       Prev                            = LrSelection.previousPhoto,
       Profile_Adobe_Standard          = CU.UpdateCameraProfile('Adobe Standard'),
+      Profile_Camera_Bold             = CU.UpdateCameraProfile('Camera Bold'),
       Profile_Camera_Clear            = CU.UpdateCameraProfile('Camera Clear'),
+      Profile_Camera_Color            = CU.UpdateCameraProfile('Camera Color'),
       Profile_Camera_Darker_Skin_Tone = CU.UpdateCameraProfile('Camera Darker Skin Tone'),
       Profile_Camera_Deep             = CU.UpdateCameraProfile('Camera Deep'),
       Profile_Camera_Faithful         = CU.UpdateCameraProfile('Camera Faithful'),
@@ -329,6 +331,7 @@ LrTasks.startAsyncTask(
       Profile_Camera_Landscape        = CU.UpdateCameraProfile('Camera Landscape'),
       Profile_Camera_Light            = CU.UpdateCameraProfile('Camera Light'),
       Profile_Camera_Lighter_Skin_Tone= CU.UpdateCameraProfile('Camera Lighter Skin Tone'),
+      Profile_Camera_LMonochrome      = CU.UpdateCameraProfile('Camera LMonochrome'),
       Profile_Camera_Monochrome       = CU.UpdateCameraProfile('Camera Monochrome'),
       Profile_Camera_Monotone         = CU.UpdateCameraProfile('Camera Monotone'),
       Profile_Camera_Muted            = CU.UpdateCameraProfile('Camera Muted'),
@@ -336,7 +339,9 @@ LrTasks.startAsyncTask(
       Profile_Camera_Neutral          = CU.UpdateCameraProfile('Camera Neutral'),
       Profile_Camera_Portrait         = CU.UpdateCameraProfile('Camera Portrait'),
       Profile_Camera_Positive_Film    = CU.UpdateCameraProfile('Camera Positive Film'),
+      Profile_Camera_Scenery          = CU.UpdateCameraProfile('Camera Scenery'),
       Profile_Camera_Standard         = CU.UpdateCameraProfile('Camera Standard'),
+      Profile_Camera_Vibrant          = CU.UpdateCameraProfile('Camera Vibrant'),
       Profile_Camera_Vivid            = CU.UpdateCameraProfile('Camera Vivid'),
       Profile_Camera_Vivid_Blue       = CU.UpdateCameraProfile('Camera Vivid Blue'),
       Profile_Camera_Vivid_Green      = CU.UpdateCameraProfile('Camera Vivid Green'),
@@ -364,6 +369,7 @@ LrTasks.startAsyncTask(
       ResetLast                       = function() Ut.execFOM(LrDevelopController.resetToDefault,LastParam) end,
       ResetRedeye                     = Ut.wrapFOM(LrDevelopController.resetRedeye),
       ResetSpotRem                    = Ut.wrapFOM(LrDevelopController.resetSpotRemoval),
+      ResetTransforms                 = Ut.wrapFOM(LrDevelopController.resetTransforms),
       RevealPanelAdjust               = CU.fChangePanel('adjustPanel'),
       RevealPanelCalibrate            = CU.fChangePanel('calibratePanel'),
       RevealPanelDetail               = CU.fChangePanel('detailPanel'),
@@ -373,6 +379,8 @@ LrTasks.startAsyncTask(
       RevealPanelSplit                = CU.fChangePanel('splitToningPanel'),
       RevealPanelTone                 = CU.fChangePanel('tonePanel'),
       RevealPanelTransform            = CU.fChangePanel('transformPanel'),
+      RotateLeft                      = Ut.wrapForEachPhoto('rotateLeft'),
+      RotateRight                     = Ut.wrapForEachPhoto('rotateRight'),
       Select1Left                     = function() LrSelection.extendSelection('left',1) end,
       Select1Right                    = function() LrSelection.extendSelection('right',1) end,
       SetRating0                      = function() LrSelection.setRating(0) end,
@@ -381,6 +389,8 @@ LrTasks.startAsyncTask(
       SetRating3                      = function() LrSelection.setRating(3) end,
       SetRating4                      = function() LrSelection.setRating(4) end,
       SetRating5                      = function() LrSelection.setRating(5) end,
+      ShoFullHidePanels               = function() LrApplicationView.fullscreenHidePanels() end,
+      ShoFullPreview                  = function() LrApplicationView.fullscreenPreview() end,
       ShoScndVwcompare                = function() LrApplicationView.showSecondaryView('compare') end,
       ShoScndVwgrid                   = function() LrApplicationView.showSecondaryView('grid') end,
       ShoScndVwlive_loupe             = function() LrApplicationView.showSecondaryView('live_loupe') end,
@@ -426,7 +436,7 @@ LrTasks.startAsyncTask(
       UprightVertical                 = Ut.wrapFOM(LrDevelopController.setValue,'PerspectiveUpright',4),
       VirtualCopy                     = function() LrApplication.activeCatalog():createVirtualCopies() end,
       WhiteBalanceAs_Shot             = Ut.wrapFOM(LrDevelopController.setValue,'WhiteBalance','As Shot'),
-      WhiteBalanceAuto                = Ut.wrapFOM(LrDevelopController.setValue,'WhiteBalance','Auto'),
+      WhiteBalanceAuto                = Ut.wrapFOM(LrDevelopController.setAutoWhiteBalance),
       WhiteBalanceCloudy              = Ut.wrapFOM(LrDevelopController.setValue,'WhiteBalance','Cloudy'),
       WhiteBalanceDaylight            = Ut.wrapFOM(LrDevelopController.setValue,'WhiteBalance','Daylight'),
       WhiteBalanceFlash               = Ut.wrapFOM(LrDevelopController.setValue,'WhiteBalance','Flash'),
@@ -438,6 +448,21 @@ LrTasks.startAsyncTask(
       ZoomOutLargeStep                = LrApplicationView.zoomOut,
       ZoomOutSmallStep                = LrApplicationView.zoomOutSome,
     }
+
+    --some functions not available before 7.4
+    if not Ut.LrVersion74orMore then
+      ACTIONS.AutoTone  = function() CU.fChangePanel('tonePanel'); CU.ApplySettings({AutoTone = true}); CU.FullRefresh(); end
+      ACTIONS.EditPhotoshop = function() LrDialogs.message('Edit in Photoshop action available in Lightroom version 7.4 and later only.') end
+      ACTIONS.ResetTransforms = function() LrDialogs.message('Reset transforms action available in Lightroom version 7.4 and later only.') end
+      ACTIONS.RotateLeft = function() LrDialogs.message('Rotate left action available in Lightroom version 7.4 and later only.')  end
+      ACTIONS.RotateRight = function() LrDialogs.message('Rotate right action available in Lightroom version 7.4 and later only.')  end 
+      ACTIONS.ShoFullHidePanels = function() LrDialogs.message('Show full screen and hide panels action available in Lightroom version 7.4 and later only.') end
+      ACTIONS.ShoFullPreview = function() LrDialogs.message('Show full screen preview action available in Lightroom version 7.4 and later only.') end
+      ACTIONS.WhiteBalanceAuto = Ut.wrapFOM(LrDevelopController.setValue,'WhiteBalance','Auto')
+      ACTIONS.openExportDialog = function() LrDialogs.message('Open export dialog action available in Lightroom version 7.4 and later only.') end
+      ACTIONS.openExportWithPreviousDialog = function() LrDialogs.message('Open export with previous settings action available in Lightroom version 7.4 and later only.') end
+    end
+
 
     local SETTINGS = {
       AppInfo            = function(value) Info.AppInfo[#Info.AppInfo+1] = value end,
@@ -519,8 +544,8 @@ LrTasks.startAsyncTask(
           if ProgramPreferences.ClientShowBezelOnChange and not silent then
             CU.showBezel(param,value)
           end
-          if ParamList.ProfileMap[param] then
-            Profiles.changeProfile(ParamList.ProfileMap[param])
+          if Database.CmdPanel[param] then
+            Profiles.changeProfile(Database.CmdPanel[param])
           end
         else --failed pickup
           if ProgramPreferences.ClientShowBezelOnChange then -- failed pickup. do I display bezel?
@@ -552,8 +577,8 @@ LrTasks.startAsyncTask(
       if ProgramPreferences.ClientShowBezelOnChange and not silent then
         CU.showBezel(param,value)
       end
-      if ParamList.ProfileMap[param] then
-        Profiles.changeProfile(ParamList.ProfileMap[param])
+      if Database.CmdPanel[param] then
+        Profiles.changeProfile(Database.CmdPanel[param])
       end
     end
     UpdateParam = UpdateParamPickup --initial state
@@ -577,7 +602,7 @@ LrTasks.startAsyncTask(
           return function(observer) -- closure
             if not sendIsConnected then return end -- can't send
             if Limits.LimitsCanBeSet() and lastrefresh < os.clock() then
-              for _,param in ipairs(ParamList.SendToMidi) do
+              for param in pairs(Database.Parameters) do
                 local lrvalue = LrDevelopController.getValue(param)
                 if observer[param] ~= lrvalue and type(lrvalue) == 'number' then --testing for MIDI2LR.SERVER.send kills responsiveness
                   MIDI2LR.SERVER:send(string.format('%s %g\n', param, CU.LRValueToMIDIValue(param)))
@@ -621,7 +646,9 @@ LrTasks.startAsyncTask(
               local split = message:find(' ',1,true)
               local param = message:sub(1,split-1)
               local value = message:sub(split+1)
-              if(ACTIONS[param]) then -- perform a one time action
+              if Database.Parameters[param] then
+                guardsetting:performWithGuard(UpdateParam,param,tonumber(value))
+              elseif(ACTIONS[param]) then -- perform a one time action
                 if(tonumber(value) > BUTTON_ON) then
                   ACTIONS[param]()
                 end
@@ -641,8 +668,6 @@ LrTasks.startAsyncTask(
                     CU.showBezel(resetparam,lrvalue)
                   end
                 end
-              else -- otherwise update a develop parameter
-                guardsetting:performWithGuard(UpdateParam,param,tonumber(value))
               end
             end
           end,

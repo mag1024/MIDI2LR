@@ -1,16 +1,12 @@
 version: 1.0.{build}
-branches:
-  only:
-  - master
+image: Visual Studio 2017
+configuration: 
+  - Debug
+  - Release
+before_build:
+  - ps: Start-FileDownload 'https://versaweb.dl.sourceforge.net/project/luabinaries/5.1.5/Tools%20Executables/lua-5.1.5_Win64_bin.zip'
+  - 7z e lua-5.1.5_Win64_bin.zip luac5.1.exe
+  - rename luac5.1.exe luac.exe
 build:
-  project: Builds/VisualStudio2017/MIDI2LR.sln
+  project: Builds\VisualStudio2017\MIDI2LR.sln
   verbosity: minimal
-after_test:
-  - bash <(curl -s https://codecov.io/bash)
-notifications:
-- provider: Email
-  to:
-  - rsjaffe@gmail.com
-  on_build_success: true
-  on_build_failure: true
-  on_build_status_changed: true

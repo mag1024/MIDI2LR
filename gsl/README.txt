@@ -1,3 +1,3 @@
-Last updated Mar 17, 2018
+Last updated February 21, 2019
 
 Repository at https://github.com/Microsoft/GSL

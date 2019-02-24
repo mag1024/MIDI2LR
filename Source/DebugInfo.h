@@ -21,24 +21,31 @@ MIDI2LR.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <string>
 #include <vector>
+
+namespace juce {
+   class String;
+}
+
 class DebugInfo {
-public:
-    DebugInfo() noexcept;
-    ~DebugInfo() = default;
-    DebugInfo(const DebugInfo& other) = default;
-    DebugInfo(DebugInfo&& other) = default;
-    DebugInfo& operator=(const DebugInfo& other) = default;
-    DebugInfo& operator=(DebugInfo&& other) = default;
-    void ResetOutput() noexcept
-    {
-        iterate_ = 0;
-    }
-    std::string const * GetInfo();
-private:
-    std::vector<std::string> info_;
-    size_t iterate_{0};
+ public:
+   explicit DebugInfo(const juce::String& profile_directory) noexcept;
+   ~DebugInfo() = default;
+   DebugInfo(const DebugInfo& other) = default;
+   DebugInfo(DebugInfo&& other) = default;
+   DebugInfo& operator=(const DebugInfo& other) = default;
+   DebugInfo& operator=(DebugInfo&& other) = default;
+   void ResetOutput() noexcept
+   {
+      iterate_ = 0;
+   }
+   const std::string* GetInfo() noexcept;
+
+ private:
+   void Send(std::string&& msg);
+   std::vector<std::string> info_;
+   size_t iterate_{0};
 };
 
 namespace rsj {
-    std::string GetKeyboardLayout();
+   std::string GetKeyboardLayout();
 }

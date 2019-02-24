@@ -19,19 +19,25 @@ You should have received a copy of the GNU General Public License along with
 MIDI2LR.  If not, see <http://www.gnu.org/licenses/>. 
 ------------------------------------------------------------------------------]]
 
-
+--constants for translation work
 local Modifiers = {
   Alt     = 0x1,
-  Cmd     = 0x2,
+  Cmd     = 0x8,
   Control = 0x2,
   Option  = 0x1,
   Shift   = 0x4,
 }
-Modifiers[LOC("$$$/Win/MenuDisplay/KeyboardShortcutElement/Shift=Shift")] = 0x4
-Modifiers[LOC("$$$/AgBezels/KeyRemapping/MacCommand=Cmd")]                = 0x2
+
+Modifiers[LOC("$$$/AgBezels/KeyRemapping/MacCommand=Cmd")]                = 0x8
 Modifiers[LOC("$$$/AgBezels/KeyRemapping/MacOption=Option")]              = 0x1
 Modifiers[LOC("$$$/AgBezels/KeyRemapping/WinAlt=Alt")]                    = 0x1
 Modifiers[LOC("$$$/AgBezels/KeyRemapping/WinControl=Control")]            = 0x2
+Modifiers[LOC("$$$/Win/MenuDisplay/KeyboardShortcutElement/Shift=Shift")] = 0x4
+
+if(WIN_ENV) then --LR uses Cmd and Ctrl interchangeably at times
+  Modifiers[LOC("$$$/AgBezels/KeyRemapping/MacCommand=Cmd")] = 0x2
+  Modifiers.Cmd                                              = 0x2
+end
 
 local MIDI2LRkeyNames = {
   Backspace = 'backspace',
@@ -42,6 +48,7 @@ local MIDI2LRkeyNames = {
   Tab       = 'tab',
   Up        = 'cursor up',
 }
+
 MIDI2LRkeyNames[LOC("$$$/Win/MenuDisplay/KeyboardShortcutElement/Backspace=Backspace")] = 'backspace'
 MIDI2LRkeyNames[LOC("$$$/Win/MenuDisplay/KeyboardShortcutElement/Down=Down")]           = 'cursor down'
 MIDI2LRkeyNames[LOC("$$$/Win/MenuDisplay/KeyboardShortcutElement/Left=Left")]           = 'cursor left'
@@ -49,7 +56,6 @@ MIDI2LRkeyNames[LOC("$$$/Win/MenuDisplay/KeyboardShortcutElement/Right=Right")] 
 MIDI2LRkeyNames[LOC("$$$/Win/MenuDisplay/KeyboardShortcutElement/Space=Space")]         = 'space'
 MIDI2LRkeyNames[LOC("$$$/Win/MenuDisplay/KeyboardShortcutElement/Tab=Tab")]             = 'tab'
 MIDI2LRkeyNames[LOC("$$$/Win/MenuDisplay/KeyboardShortcutElement/Up=Up")]               = 'cursor up'
-
 
 local function LRkeytoCode(arg1,addmodifier)
   local mystring = LOC(arg1)
